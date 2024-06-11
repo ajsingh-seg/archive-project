@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// Replace with the path to your input file
-	inputFile := "input.txt"
+	inputFile := "random_json_files/1-10MB.txt"
 
 	// Step 1: Compress using gzip
 	start := time.Now()
@@ -22,13 +22,14 @@ func main() {
 		fmt.Printf("Error compressing with gzip: %v\n", err)
 		return
 	}
+	fmt.Println("gzip time : ", gzipTime)
 	gzipDuration := time.Since(start)
 
 	// Step 2: Compress using zstd with various levels
 	zstdTimes := make(map[int]time.Duration)
 	zstdSizes := make(map[int]int64)
 
-	zstdLevels := []int{-1, 1, 3, 5, 10, 15, 20}
+	zstdLevels := []int{1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}
 	for _, level := range zstdLevels {
 		start := time.Now()
 		zstdFile := fmt.Sprintf("zstd_compressed_level_%d.zst", level)
@@ -37,6 +38,7 @@ func main() {
 			fmt.Printf("Error compressing with zstd (level %d): %v\n", level, err)
 			return
 		}
+		fmt.Println("zstd time is : ", zstdTime)
 		zstdTimes[level] = time.Since(start)
 		zstdSizes[level] = zstdSize
 	}
@@ -49,6 +51,7 @@ func main() {
 		fmt.Printf("Error decompressing gzip: %v\n", err)
 		return
 	}
+	fmt.Println("gunzip time is : ", gunzipTime)
 	gunzipDuration := time.Since(start)
 
 	// Step 4: Decompress zstd files (various levels)
@@ -61,6 +64,7 @@ func main() {
 			fmt.Printf("Error decompressing zstd (level %d): %v\n", level, err)
 			return
 		}
+		fmt.Println(zstdDecompressTime)
 		zstdDecompressTimes[level] = time.Since(start)
 	}
 

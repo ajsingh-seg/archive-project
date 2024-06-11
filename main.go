@@ -12,7 +12,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
-// func main() {
+func main() {
 	// Replace with the path to your input file
 	inputFile := "input.txt"
 
