@@ -124,6 +124,7 @@ func compressWithGzip(inputFile, outputFile string) (time.Duration, int64, error
 	return time.Since(start), compressedSize, nil
 }
 
+// compressWithZstd compresses a file using zstd at the specified level.
 func compressWithZstd(inputFile, outputFile string, level int) (time.Duration, int64, error) {
 	start := time.Now()
 
@@ -141,8 +142,21 @@ func compressWithZstd(inputFile, outputFile string, level int) (time.Duration, i
 	}
 	defer outFile.Close()
 
+	// Validate the compression level
+	var encoderLevel zstd.EncoderLevel
+	switch {
+	case level == -5:
+		encoderLevel = zstd.SpeedFastest
+	case level == 22:
+		encoderLevel = zstd.SpeedBestCompression
+	case level >= 1 && level <= 19:
+		encoderLevel = zstd.EncoderLevelFromZstd(level)
+	default:
+		return 0, 0, fmt.Errorf("unsupported compression level: %d", level)
+	}
+
 	// Create zstd writer with specified level
-	zstdWriter, err := zstd.NewWriter(outFile, zstd.WithEncoderLevel(zstd.EncoderLevel(level)))
+	zstdWriter, err := zstd.NewWriter(outFile, zstd.WithEncoderLevel(encoderLevel))
 	if err != nil {
 		return 0, 0, err
 	}
