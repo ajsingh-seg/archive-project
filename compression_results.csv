@@ -1,0 +1,2 @@
+FilePath,Original Size,Gzip Compressed Size(B),Gzip Compression Time(s),Gzip Decompression Time(s),Zstd Compressed Size(B),Zstd Compression Time(s),Zstd Decompression Time(s)
+random_json_files/100KB.txt,102986,19390,0.008442,0.001626,17627,0.007430,0.000979

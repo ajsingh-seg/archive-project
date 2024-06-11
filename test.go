@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// Replace with the path to your input file
-	inputFile := "random_json_files/1-10MB.txt"
+	inputFile := "random_json_files/<1MB.txt"
 
 	// Step 1: Compress using gzip
 	start := time.Now()
