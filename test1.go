@@ -16,7 +16,7 @@ func main() {
 	fmt.Println("Starting the compression engine")
 
 	// Input file
-	inputFile := "random_json_files/100KB.txt"
+	inputFile := "random_json_files/1-10MB.txt"
 
 	// Compressing the file using gzip
 	start := time.Now()
@@ -30,7 +30,7 @@ func main() {
 
 	// Compressing the file using zstd
 	start = time.Now()
-	zstdResult, err := compressFileZstd(inputFile, 3) // Example using compression level 3
+	zstdResult, err := compressFileZstd(inputFile, 50) // Example using compression level 3
 	if err != nil {
 		fmt.Printf("Error compressing the file with zstd: %v\n", err)
 		return

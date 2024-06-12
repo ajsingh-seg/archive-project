@@ -1,0 +1,5 @@
+FilePath,Original Size,Gzip Compressed Size(B),Gzip Compression Time(s),Gzip Decompression Time(s),Zstd Compressed Size(B),Zstd Compression Time(s),Zstd Decompression Time(s),Zstd Compression Level
+random_json_files/1-10MB.txt,10486030,1919212,0.179517,0.030114,1723020,0.035625,0.010952,1
+random_json_files/1-10MB.txt,10486030,1919212,0.179517,0.030114,1821787,0.049600,0.010376,2
+random_json_files/1-10MB.txt,10486030,1919212,0.179517,0.030114,1869308,0.117821,0.010368,3
+random_json_files/1-10MB.txt,10486030,1919212,0.179517,0.030114,1803288,0.430714,0.014399,4
