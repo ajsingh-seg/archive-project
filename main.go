@@ -5,94 +5,80 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/klauspost/compress/zstd"
 )
 
 func main() {
-	// Replace with the path to your input file
-	inputFile := "input.txt"
+	fmt.Println("Starting the compression engine")
 
-	// Step 1: Compress using gzip
+	// Input file
+	inputFile := "random_json_files/100KB.txt"
+
+	// Compressing the file using gzip
 	start := time.Now()
-	gzipFile := "gzip_compressed.gz"
-	gzipTime, gzipSize, err := compressWithGzip(inputFile, gzipFile)
+	gzipResult, err := compressFileGzip(inputFile)
 	if err != nil {
-		fmt.Printf("Error compressing with gzip: %v\n", err)
+		fmt.Printf("Error compressing the file with gzip: %v\n", err)
 		return
 	}
-	gzipDuration := time.Since(start)
+	gzipResult.CompressionTime = time.Since(start)
+	fmt.Printf("Gzip compression result: %+v\n", gzipResult)
 
-	// Step 2: Compress using zstd with various levels
-	zstdTimes := make(map[int]time.Duration)
-	zstdSizes := make(map[int]int64)
-
-	zstdLevels := []int{-1, 1, 3, 5, 10, 15, 20}
-	for _, level := range zstdLevels {
-		start := time.Now()
-		zstdFile := fmt.Sprintf("zstd_compressed_level_%d.zst", level)
-		zstdTime, zstdSize, err := compressWithZstd(inputFile, zstdFile, level)
-		if err != nil {
-			fmt.Printf("Error compressing with zstd (level %d): %v\n", level, err)
-			return
-		}
-		zstdTimes[level] = time.Since(start)
-		zstdSizes[level] = zstdSize
-	}
-
-	// Step 3: Decompress gzip file
-	start = time.Now()
-	decompressedFile := "decompressed_gzip.txt"
-	gunzipTime, err := decompressGzip(gzipFile, decompressedFile)
-	if err != nil {
-		fmt.Printf("Error decompressing gzip: %v\n", err)
-		return
-	}
-	gunzipDuration := time.Since(start)
-
-	// Step 4: Decompress zstd files (various levels)
-	zstdDecompressTimes := make(map[int]time.Duration)
-	for _, level := range zstdLevels {
-		start := time.Now()
-		decompressedFile := fmt.Sprintf("decompressed_zstd_level_%d.txt", level)
-		zstdDecompressTime, err := decompressZstd(fmt.Sprintf("zstd_compressed_level_%d.zst", level), decompressedFile)
-		if err != nil {
-			fmt.Printf("Error decompressing zstd (level %d): %v\n", level, err)
-			return
-		}
-		zstdDecompressTimes[level] = time.Since(start)
-	}
-
-	// Record original file size
+	// Getting the size of the original file
 	originalSize, err := getFileSize(inputFile)
 	if err != nil {
-		fmt.Printf("Error getting original file size: %v\n", err)
+		fmt.Printf("Error getting the size of the original file: %v\n", err)
 		return
 	}
 
-	// Print results
-	fmt.Printf("Original file size: %d bytes\n", originalSize)
-	fmt.Printf("Step 1: Gzip compression took %v, compressed size: %d bytes\n", gzipDuration, gzipSize)
-	for _, level := range zstdLevels {
-		fmt.Printf("Step 2: Zstd compression (level %d) took %v, compressed size: %d bytes\n", level, zstdTimes[level], zstdSizes[level])
-	}
-	fmt.Printf("Step 3: Gzip decompression took %v\n", gunzipDuration)
-	for _, level := range zstdLevels {
-		fmt.Printf("Step 4: Zstd decompression (level %d) took %v\n", level, zstdDecompressTimes[level])
-	}
-}
+	// Creating a slice to store results
+	var results []FinalCompressionResult
 
-// CompressionResult holds the results of the compression
-type CompressionResult struct {
-	FilePath          string
-	Algorithm         string
-	OriginalSize      int64
-	CompressedSize    int64
-	CompressionTime   time.Duration
-	DecompressionTime time.Duration
+	// Define the Zstd levels to test
+	zstdLevels := []int{
+		1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+		11, 12, 13, 14, 15, 16, 17, 18, 19,
+	}
+
+	// Iterating over all Zstd compression levels
+	for _, level := range zstdLevels {
+		start = time.Now()
+		zstdResult, err := compressFileZstd(inputFile, level)
+		if err != nil {
+			fmt.Printf("Error compressing the file with zstd level %v: %v\n", level, err)
+			continue
+		}
+		zstdResult.CompressionTime = time.Since(start)
+		fmt.Printf("Zstd compression result (level %v): %+v\n", level, zstdResult)
+
+		// Creating the final result for this level
+		finalResult := FinalCompressionResult{
+			FilePath:              inputFile,
+			OriginalSize:          originalSize,
+			GzipCompressedSize:    gzipResult.CompressedSize,
+			GzipCompressionTime:   gzipResult.CompressionTime,
+			GzipDecompressionTime: gzipResult.DecompressionTime,
+			ZstdCompressedSize:    zstdResult.CompressedSize,
+			ZstdCompressionTime:   zstdResult.CompressionTime,
+			ZstdDecompressionTime: zstdResult.DecompressionTime,
+			ZstdCompressionLevel:  level,
+		}
+
+		// Adding the result to the slice
+		results = append(results, finalResult)
+	}
+
+	// Writing the results to CSV
+	err = writeResultsToCSV("compression_results1.csv", results)
+	if err != nil {
+		fmt.Printf("Error writing results to CSV: %v\n", err)
+		return
+	}
+	fmt.Println("Results written to CSV successfully")
 }
 
 type FinalCompressionResult struct {
@@ -104,6 +90,7 @@ type FinalCompressionResult struct {
 	GzipDecompressionTime time.Duration
 	ZstdCompressionTime   time.Duration
 	ZstdDecompressionTime time.Duration
+	ZstdCompressionLevel  int
 }
 
 func writeResultsToCSV(filename string, results []FinalCompressionResult) error {
@@ -135,7 +122,7 @@ func writeResultsToCSV(filename string, results []FinalCompressionResult) error 
 
 	if writeHeader {
 		// Write the header
-		header := []string{"FilePath", "Original Size", "Gzip Compressed Size(B)", "Gzip Compression Time(s)", "Gzip Decompression Time(s)", "Zstd Compressed Size(B)", "Zstd Compression Time(s)", "Zstd Decompression Time(s)"}
+		header := []string{"FilePath", "Original Size", "Gzip Compressed Size(B)", "Gzip Compression Time(s)", "Gzip Decompression Time(s)", "Zstd Compressed Size(B)", "Zstd Compression Time(s)", "Zstd Decompression Time(s)", "Zstd Compression Level"}
 		err = writer.Write(header)
 		if err != nil {
 			return err
@@ -153,17 +140,35 @@ func writeResultsToCSV(filename string, results []FinalCompressionResult) error 
 			fmt.Sprintf("%d", result.ZstdCompressedSize),
 			fmt.Sprintf("%f", result.ZstdCompressionTime.Seconds()),
 			fmt.Sprintf("%f", result.ZstdDecompressionTime.Seconds()),
+			fmt.Sprintf("%d", result.ZstdCompressionLevel),
 		}
 		err = writer.Write(record)
 		if err != nil {
 			return err
 		}
 	}
+	log.Printf("Results written to CSV successfully: %v", filename)
 	return nil
 }
 
-// compressGzip compresses a file using gzip and returns the result
-func compressGzip(inputFileName string) (CompressionResult, error) {
+func getFileSize(filePath string) (int64, error) {
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		return 0, err
+	}
+	return fileInfo.Size(), nil
+}
+
+type CompressionResult struct {
+	FilePath          string
+	Algorithm         string
+	OriginalSize      int64
+	CompressedSize    int64
+	CompressionTime   time.Duration
+	DecompressionTime time.Duration
+}
+
+func compressFileGzip(inputFileName string) (CompressionResult, error) {
 	start := time.Now()
 
 	// Open the input file
@@ -215,7 +220,7 @@ func compressGzip(inputFileName string) (CompressionResult, error) {
 
 	// Decompress the file to measure decompression time
 	start = time.Now()
-	err = decompressGzip(outputFileName)
+	err = decompressFileGzip(outputFileName)
 	if err != nil {
 		return CompressionResult{}, fmt.Errorf("error decompressing file: %v", err)
 	}
@@ -231,8 +236,7 @@ func compressGzip(inputFileName string) (CompressionResult, error) {
 	}, nil
 }
 
-// decompressGzip decompresses a gzip file
-func decompressGzip(compressedFileName string) error {
+func decompressFileGzip(compressedFileName string) error {
 	compressedFile, err := os.Open(compressedFileName)
 	if err != nil {
 		return fmt.Errorf("error opening compressed file: %v", err)
@@ -245,7 +249,7 @@ func decompressGzip(compressedFileName string) error {
 	}
 	defer gzipReader.Close()
 
-	outputFileName := strings.TrimSuffix(compressedFileName, ".gz")
+	outputFileName := compressedFileName + ".decompressed"
 	outputFile, err := os.Create(outputFileName)
 	if err != nil {
 		return fmt.Errorf("error creating output file: %v", err)
@@ -260,8 +264,7 @@ func decompressGzip(compressedFileName string) error {
 	return nil
 }
 
-// compressZstd compresses a file using zstd and returns the result
-func compressZstd(inputFileName string) (CompressionResult, error) {
+func compressFileZstd(inputFileName string, level int) (CompressionResult, error) {
 	start := time.Now()
 
 	// Open the input file
@@ -286,8 +289,10 @@ func compressZstd(inputFileName string) (CompressionResult, error) {
 	}
 	defer outputFile.Close()
 
-	// Create a zstd writer
-	zstdWriter, err := zstd.NewWriter(outputFile, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
+	// Create a zstd writer with the specified compression level
+	encoderLevel := zstd.EncoderLevelFromZstd(level)
+	fmt.Printf("Using zstd compression level: %v\n", encoderLevel)
+	zstdWriter, err := zstd.NewWriter(outputFile, zstd.WithEncoderLevel(encoderLevel))
 	if err != nil {
 		return CompressionResult{}, fmt.Errorf("error creating zstd writer: %v", err)
 	}
@@ -316,7 +321,7 @@ func compressZstd(inputFileName string) (CompressionResult, error) {
 
 	// Decompress the file to measure decompression time
 	start = time.Now()
-	err = decompressZstd(outputFileName)
+	err = decompressFileZstd(outputFileName)
 	if err != nil {
 		return CompressionResult{}, fmt.Errorf("error decompressing file: %v", err)
 	}
@@ -332,8 +337,7 @@ func compressZstd(inputFileName string) (CompressionResult, error) {
 	}, nil
 }
 
-// decompressZstd decompresses a zstd file
-func decompressZstd(compressedFileName string) error {
+func decompressFileZstd(compressedFileName string) error {
 	compressedFile, err := os.Open(compressedFileName)
 	if err != nil {
 		return fmt.Errorf("error opening compressed file: %v", err)
@@ -359,13 +363,4 @@ func decompressZstd(compressedFileName string) error {
 	}
 
 	return nil
-}
-
-// get the size of file
-func getFileSize(filename string) (int64, error) {
-	fileInfo, err := os.Stat(filename)
-	if err != nil {
-		return 0, err
-	}
-	return fileInfo.Size(), nil
 }
